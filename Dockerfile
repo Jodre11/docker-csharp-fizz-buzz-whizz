@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0.411-alpine3.22@sha256:071ec6075f01f91ceaef8f1eaed5d43873635d46441f99221473c456f37f8c20
+FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine
 
 WORKDIR /app
 
