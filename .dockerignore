@@ -1,0 +1,26 @@
+# 1. Ignore everything by default
+**
+
+!MySolution.sln
+!**/*.sln
+!**/*.csproj
+!src/**/*.cs
+!test/**/*.cs
+
+# 4. Preserve the folder structure so those files can actually be sent
+!src/
+!test/
+!./run_tests.sh
+
+# 5. Now re-ignore build outputs and other non-source cruft
+src/**/bin/
+src/**/obj/
+test/**/bin/
+test/**/obj/
+
+# (Optional) if you have any other generated/non-source files you know you never need,
+# just add similar patterns here, e.g.:
+# *.user
+# *.suo
+# logs/
+# temp/
