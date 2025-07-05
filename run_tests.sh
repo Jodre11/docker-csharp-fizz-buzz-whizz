@@ -2,4 +2,4 @@
 
 set -eu
 
-dotnet test "${@}"
+dotnet run --project ./test/FizzBuzzWhizz.Tests/ -- "${@}"
