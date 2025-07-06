@@ -186,9 +186,24 @@ partial class {className}
     }
 
     /// <summary>
-    /// Generates the body of the Identity method as a series of ordered if statements.
+    /// Generates the body of the Identity method with performance optimization for large rule sets.
     /// </summary>
     private IEnumerable<string> GenerateIdentityBody(KeyValuePair<long, string>[] rules)
+    {
+        // Use exponential approach for small rule sets (optimal performance)
+        if (rules.Length <= 7)
+        {
+            return GenerateExponentialApproach(rules);
+        }
+
+        // Use linear approach for larger rule sets (prevents exponential blowup)
+        return GenerateLinearApproach(rules);
+    }
+
+    /// <summary>
+    /// Original exponential approach - optimal for small rule sets.
+    /// </summary>
+    private IEnumerable<string> GenerateExponentialApproach(KeyValuePair<long, string>[] rules)
     {
         var moduloExpressions = rules
             .Select(rule => $"n % {rule.Key} == 0")
@@ -204,16 +219,40 @@ partial class {className}
                 .Select(expression => expression.moduloExpression);
 
             var valuesToInclude = perm
-                    .Zip(
-                        rules,
-                        (include, rule) => (include, rule.Value))
-                    .Where(value => value.include)
-                    .Select(value => value.Value);
+                .Zip(
+                    rules,
+                    (include, rule) => (include, rule.Value))
+                .Where(value => value.include)
+                .Select(value => value.Value);
 
             var expression = string.Join(" && ", expressionsToInclude);
             var substitutes = string.Concat(valuesToInclude);
             yield return $"        if ({expression}) return \"{substitutes}\";";
         }
+    }
+
+    /// <summary>
+    /// Linear approach - builds result incrementally, O(n) complexity.
+    /// </summary>
+    private IEnumerable<string> GenerateLinearApproach(KeyValuePair<long, string>[] rules)
+    {
+        var maxLength = rules.Sum(r => r.Value.Length);
+        yield return $"        System.Span<char> result = stackalloc char[{maxLength}];";
+        yield return "        var index = 0;";
+        yield return "        var hasMatch = false;";
+
+        foreach (var rule in rules)
+        {
+            var length = rule.Value.Length;
+            yield return $"        if (n % {rule.Key} == 0)";
+            yield return "        {";
+            yield return $"            \"{rule.Value}\".CopyTo(result[index..]);";
+            yield return $"            index += {length};";
+            yield return "            hasMatch = true;";
+            yield return "        }";
+        }
+
+        yield return "        if (hasMatch) return result[..index].ToString();";
     }
 
     private static IEnumerable<bool[]> GetBooleanPermutations(int n)

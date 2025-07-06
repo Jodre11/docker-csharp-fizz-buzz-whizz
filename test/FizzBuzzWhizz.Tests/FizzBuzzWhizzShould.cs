@@ -46,9 +46,28 @@ public partial class Collisions
 {
 }";
 
+    private const string ManyRulesClassText = @"
+namespace TestNamespace;
+
+[FizzBuzzWhizz.FizzBuzzWhizz(
+    ""Fizz"", ""3"",
+    ""Buzz"", ""5"",
+    ""Whizz"", ""7"",
+    ""Bang"", ""11"",
+    ""Boom"", ""13"",
+    ""Pow"", ""17"",
+    ""Zap"", ""19"",
+    ""Crack"", ""23"",
+    ""Flash"", ""29"",
+    ""Thunder"", ""31"")]
+public partial class ManyRules
+{
+}";
+
     private static async Task<(object instance, MethodInfo method)> Generate(
         string classText,
-        string className)
+        string className,
+        bool verify = true)
     {
         // Create an instance of the source generator.
         var generator = new FizzBuzzWhizz();
@@ -69,14 +88,18 @@ public partial class Collisions
         var runResult = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult();
 
         // All generated files can be found in 'RunResults.GeneratedTrees'.
-        var generatedAttributeSyntax = runResult.GeneratedTrees.Single(t => t.FilePath.EndsWith("FizzBuzzWhizzAttribute.g.cs"));
+        var generatedAttributeSyntax =
+            runResult.GeneratedTrees.Single(t => t.FilePath.EndsWith("FizzBuzzWhizzAttribute.g.cs"));
         var generatedClassSyntax = runResult.GeneratedTrees.Single(t => t.FilePath.EndsWith($"{className}.g.cs"));
 
-        await Verify(new
+        if (verify)
         {
-            Attribute = generatedAttributeSyntax.ToString(),
-            Class = generatedClassSyntax.ToString()
-        }, VerifySettings);
+            await Verify(new
+            {
+                Attribute = generatedAttributeSyntax.ToString(),
+                Class = generatedClassSyntax.ToString()
+            }, VerifySettings);
+        }
 
         // Add the generated tree to the compilation
         var updatedCompilation = compilation.AddSyntaxTrees(generatedAttributeSyntax, generatedClassSyntax);
@@ -84,6 +107,7 @@ public partial class Collisions
         // Emit the assembly to a stream
         using var ms = new MemoryStream();
         var emitResult = updatedCompilation.Emit(ms, cancellationToken: TestContext.Current.CancellationToken);
+
         Assert.True(emitResult.Success, "Compilation failed");
 
         // Load the assembly
@@ -108,15 +132,15 @@ public partial class Collisions
     {
         var (instance, method) = await Generate(FizzBuzzClassText, "FizzBuzz");
 
-        Assert.Equal("0", method.Invoke(instance, [ 0L ] ));
-        Assert.Equal("1", method.Invoke(instance, [ 1L ] ));
-        Assert.Equal("Fizz", method.Invoke(instance, [ 3L ] ));
-        Assert.Equal("Buzz", method.Invoke(instance, [ 5L ] ));
-        Assert.Equal("FizzBuzz", method.Invoke(instance, [ 15L ] ));
-        Assert.Equal("Fizz", method.Invoke(instance, [ 6L ] ));
-        Assert.Equal("Buzz", method.Invoke(instance, [ 10L ] ));
-        Assert.Equal("FizzBuzz", method.Invoke(instance, [ 30L ] ));
-        Assert.Equal("31", method.Invoke(instance, [ 31L ] ));
+        Assert.Equal("0", method.Invoke(instance, [0L]));
+        Assert.Equal("1", method.Invoke(instance, [1L]));
+        Assert.Equal("Fizz", method.Invoke(instance, [3L]));
+        Assert.Equal("Buzz", method.Invoke(instance, [5L]));
+        Assert.Equal("FizzBuzz", method.Invoke(instance, [15L]));
+        Assert.Equal("Fizz", method.Invoke(instance, [6L]));
+        Assert.Equal("Buzz", method.Invoke(instance, [10L]));
+        Assert.Equal("FizzBuzz", method.Invoke(instance, [30L]));
+        Assert.Equal("31", method.Invoke(instance, [31L]));
     }
 
     [Fact]
@@ -124,19 +148,19 @@ public partial class Collisions
     {
         var (instance, method) = await Generate(FizzBuzzWhizzedClassText, "FizzBuzzWhizzed");
 
-        Assert.Equal("0", method.Invoke(instance, [ 0L ] ));
-        Assert.Equal("1", method.Invoke(instance, [ 1L ] ));
-        Assert.Equal("Fizz", method.Invoke(instance, [ 3L ] ));
-        Assert.Equal("Buzz", method.Invoke(instance, [ 5L ] ));
-        Assert.Equal("Whizz", method.Invoke(instance, [ 7L ] ));
-        Assert.Equal("FizzBuzz", method.Invoke(instance, [ 15L ] ));
-        Assert.Equal("Fizz", method.Invoke(instance, [ 6L ] ));
-        Assert.Equal("Buzz", method.Invoke(instance, [ 10L ] ));
-        Assert.Equal("FizzWhizz", method.Invoke(instance, [ 21L ] ));
-        Assert.Equal("FizzBuzz", method.Invoke(instance, [ 30L ] ));
-        Assert.Equal("31", method.Invoke(instance, [ 31L ] ));
-        Assert.Equal("FizzBuzzWhizz", method.Invoke(instance, [ 105L ] ));
-        Assert.Equal("106", method.Invoke(instance, [ 106L ] ));
+        Assert.Equal("0", method.Invoke(instance, [0L]));
+        Assert.Equal("1", method.Invoke(instance, [1L]));
+        Assert.Equal("Fizz", method.Invoke(instance, [3L]));
+        Assert.Equal("Buzz", method.Invoke(instance, [5L]));
+        Assert.Equal("Whizz", method.Invoke(instance, [7L]));
+        Assert.Equal("FizzBuzz", method.Invoke(instance, [15L]));
+        Assert.Equal("Fizz", method.Invoke(instance, [6L]));
+        Assert.Equal("Buzz", method.Invoke(instance, [10L]));
+        Assert.Equal("FizzWhizz", method.Invoke(instance, [21L]));
+        Assert.Equal("FizzBuzz", method.Invoke(instance, [30L]));
+        Assert.Equal("31", method.Invoke(instance, [31L]));
+        Assert.Equal("FizzBuzzWhizz", method.Invoke(instance, [105L]));
+        Assert.Equal("106", method.Invoke(instance, [106L]));
     }
 
     [Fact]
@@ -144,12 +168,12 @@ public partial class Collisions
     {
         var (instance, method) = await Generate(SillyDuplicationsClassText, "SillyDuplications");
 
-        Assert.Equal("0", method.Invoke(instance, [ 0L ] ));
-        Assert.Equal("1", method.Invoke(instance, [ 1L ] ));
-        Assert.Equal("TwoToo", method.Invoke(instance, [ 2L ] ));
-        Assert.Equal("TwoTooFourFor", method.Invoke(instance, [ 4L ] ));
-        Assert.Equal("5", method.Invoke(instance, [ 5L ] ));
-        Assert.Equal("TwoTooFourFor", method.Invoke(instance, [ 8L ] ));
+        Assert.Equal("0", method.Invoke(instance, [0L]));
+        Assert.Equal("1", method.Invoke(instance, [1L]));
+        Assert.Equal("TwoToo", method.Invoke(instance, [2L]));
+        Assert.Equal("TwoTooFourFor", method.Invoke(instance, [4L]));
+        Assert.Equal("5", method.Invoke(instance, [5L]));
+        Assert.Equal("TwoTooFourFor", method.Invoke(instance, [8L]));
     }
 
     [Fact]
@@ -157,16 +181,30 @@ public partial class Collisions
     {
         var (instance, method) = await Generate(CollisionsClassText, "Collisions");
 
-        Assert.Equal("0", method.Invoke(instance, [ 0L ] ));
-        Assert.Equal("1", method.Invoke(instance, [ 1L ] ));
-        Assert.Equal("Bang", method.Invoke(instance, [ 2L ] ));
-        Assert.Equal("Bang", method.Invoke(instance, [ 3L ] ));
-        Assert.Equal("BangBang", method.Invoke(instance, [ 4L ] ));
-        Assert.Equal("BangBang", method.Invoke(instance, [ 6L ] ));
-        Assert.Equal("7", method.Invoke(instance, [ 7L ] ));
-        Assert.Equal("BangBang", method.Invoke(instance, [ 8L ] ));
-        Assert.Equal("Bang", method.Invoke(instance, [ 9L ] ));
-        Assert.Equal("BangBangBangBang", method.Invoke(instance, [ 120L ] ));
-        Assert.Equal("121", method.Invoke(instance, [ 121L ] ));
+        Assert.Equal("0", method.Invoke(instance, [0L]));
+        Assert.Equal("1", method.Invoke(instance, [1L]));
+        Assert.Equal("Bang", method.Invoke(instance, [2L]));
+        Assert.Equal("Bang", method.Invoke(instance, [3L]));
+        Assert.Equal("BangBang", method.Invoke(instance, [4L]));
+        Assert.Equal("BangBang", method.Invoke(instance, [6L]));
+        Assert.Equal("7", method.Invoke(instance, [7L]));
+        Assert.Equal("BangBang", method.Invoke(instance, [8L]));
+        Assert.Equal("Bang", method.Invoke(instance, [9L]));
+        Assert.Equal("BangBangBangBang", method.Invoke(instance, [120L]));
+        Assert.Equal("121", method.Invoke(instance, [121L]));
+    }
+
+    [Fact]
+    public async Task ManyRules()
+    {
+        var (instance, method) = await Generate(ManyRulesClassText, "ManyRules", false);
+
+        Assert.Equal("0", method.Invoke(instance, [0L]));
+        Assert.Equal("1", method.Invoke(instance, [1L]));
+        Assert.Equal("Fizz", method.Invoke(instance, [3L]));
+        Assert.Equal("Buzz", method.Invoke(instance, [5L]));
+        Assert.Equal("Whizz", method.Invoke(instance, [7L]));
+        Assert.Equal("FizzBuzz", method.Invoke(instance, [15L]));
+        Assert.Equal("FizzBuzzWhizzBangBoomPowZapCrackFlashThunder", method.Invoke(instance, [100280245065L]));
     }
 }
