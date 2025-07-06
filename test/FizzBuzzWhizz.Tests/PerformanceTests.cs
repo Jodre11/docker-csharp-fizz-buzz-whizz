@@ -36,6 +36,7 @@ public partial class PerformanceTest
             {
                 method.Invoke(instance, [testCase]);
             }
+
             stopwatch.Stop();
 
             var timePerCall = stopwatch.Elapsed.TotalMilliseconds / size;
@@ -49,7 +50,8 @@ public partial class PerformanceTest
 
         // For O(1) complexity, the ratio should be close to 1 (within reasonable bounds)
         // Allow for some variance due to JIT, GC, etc., but not exponential growth
-        Assert.True(ratio < 3, $"Time complexity appears non-constant: {firstMeasurement:F6}ms -> {lastMeasurement:F6}ms (ratio: {ratio:F2})");
+        Assert.True(ratio < 3,
+            $"Time complexity appears non-constant: {firstMeasurement:F6}ms -> {lastMeasurement:F6}ms (ratio: {ratio:F2})");
     }
 
     [Fact]
@@ -91,7 +93,8 @@ public partial class PerformanceTest
         var ratio = lastMeasurement / firstMeasurement;
 
         // For O(1) space complexity, memory per call should remain constant
-        Assert.True(ratio < 2, $"Space complexity appears non-constant: {firstMeasurement:F2} bytes -> {lastMeasurement:F2} bytes per call (ratio: {ratio:F2})");
+        Assert.True(ratio < 2,
+            $"Space complexity appears non-constant: {firstMeasurement:F2} bytes -> {lastMeasurement:F2} bytes per call (ratio: {ratio:F2})");
     }
 
     [Fact]
@@ -101,8 +104,10 @@ public partial class PerformanceTest
         var ruleConfigurations = new[]
         {
             ("Simple", "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\")]"),
-            ("Medium", "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\", \"Whizz\", \"7\", \"Bang\", \"11\")]"),
-            ("Complex", "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\", \"Whizz\", \"7\", \"Bang\", \"11\", \"Boom\", \"13\", \"Pow\", \"17\", \"Zap\", \"19\")]")
+            ("Medium",
+                "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\", \"Whizz\", \"7\", \"Bang\", \"11\")]"),
+            ("Complex",
+                "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\", \"Whizz\", \"7\", \"Bang\", \"11\", \"Boom\", \"13\", \"Pow\", \"17\", \"Zap\", \"19\")]")
         };
 
         var performanceResults = new Dictionary<string, double>();
@@ -133,6 +138,7 @@ public partial class {name}Test
             {
                 method.Invoke(instance, [testCase]);
             }
+
             stopwatch.Stop();
 
             var timePerCall = stopwatch.Elapsed.TotalMilliseconds / testCases.Length;
@@ -156,7 +162,7 @@ public partial class {name}Test
         var expectedMediumRatio = (double)mediumRules / simpleRules;
         var expectedComplexRatio = (double)complexRules / simpleRules;
 
-                // Allow for some overhead but should scale roughly linearly
+        // Allow for some overhead but should scale roughly linearly
         Assert.True(mediumRatio < expectedMediumRatio * 1.5,
             $"Medium complexity scales poorly: {mediumRatio:F2}x vs expected ~{expectedMediumRatio:F2}x");
         Assert.True(complexRatio < expectedComplexRatio * 2,
@@ -201,6 +207,7 @@ public partial class {className}
                 {
                     method.Invoke(instance, [testCase]);
                 }
+
                 stopwatch.Stop();
 
                 var timePerCall = stopwatch.Elapsed.TotalMilliseconds / testCases.Length;
@@ -240,7 +247,7 @@ public partial class {className}
             growthRates.Add(growthRate);
         }
 
-                // Average growth rate should be reasonable (not exponential)
+        // Average growth rate should be reasonable (not exponential)
         var avgGrowthRate = growthRates.Average();
         Assert.True(avgGrowthRate < 1.5,
             $"Average growth rate {avgGrowthRate:F2} suggests exponential scaling");
@@ -284,19 +291,20 @@ public partial class {className}
         Assert.All(results, result => Assert.True(result, "Method failed for some input size"));
     }
 
-        [Fact]
+    [Fact]
     public void IdentityMethod_ShouldMaintainPerformanceBaseline()
     {
         // Arrange - Test cases that should maintain consistent performance
         var baselineTests = new[]
         {
             ("FizzBuzz", "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\")]", typeof(FizzBuzzModel)),
-            ("FizzBuzzWhizz", "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\", \"Whizz\", \"7\")]", typeof(FizzBuzzWhizzModel))
+            ("FizzBuzzWhizz", "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\", \"Whizz\", \"7\")]",
+                typeof(FizzBuzzWhizzModel))
         };
-        
+
         var testCases = GenerateTestCases(1000);
         var performanceResults = new Dictionary<string, (double generated, double model, double stdDev)>();
-        
+
         // Act - Measure performance for baseline test cases with multiple runs
         foreach (var (name, attributeText, modelType) in baselineTests)
         {
@@ -308,24 +316,24 @@ namespace TestNamespace;
 public partial class {className}
 {{
 }}";
-            
+
             var (instance, method) = Generate(classText, className);
             var modelInstance = Activator.CreateInstance(modelType);
             var modelMethod = modelType.GetMethod("Identity");
             Assert.NotNull(modelMethod);
-            
+
             // Warmup
             for (int i = 0; i < 100; i++)
             {
                 method.Invoke(instance, [testCases[i]]);
                 modelMethod.Invoke(modelInstance, [testCases[i]]);
             }
-            
+
             // Multiple runs to establish baseline and variance
             var generatedRuns = new List<double>();
             var modelRuns = new List<double>();
             const int numRuns = 5;
-            
+
             for (int run = 0; run < numRuns; run++)
             {
                 // Measure generated
@@ -335,33 +343,35 @@ public partial class {className}
                 {
                     method.Invoke(instance, [testCase]);
                 }
+
                 stopwatch.Stop();
                 var generatedTimePerCall = stopwatch.Elapsed.TotalMilliseconds / testCases.Length;
                 generatedRuns.Add(generatedTimePerCall);
-                
+
                 // Measure model
                 stopwatch.Restart();
                 foreach (var testCase in testCases)
                 {
                     modelMethod.Invoke(modelInstance, [testCase]);
                 }
+
                 stopwatch.Stop();
                 var modelTimePerCall = stopwatch.Elapsed.TotalMilliseconds / testCases.Length;
                 modelRuns.Add(modelTimePerCall);
             }
-            
+
             var generatedAvg = generatedRuns.Average();
             var modelAvg = modelRuns.Average();
             var modelStdDev = CalculateStandardDeviation(modelRuns);
-            
+
             performanceResults[name] = (generatedAvg, modelAvg, modelStdDev);
         }
-        
+
         // Assert - Generated code should not be more than 2.5 sigma above model average
         foreach (var (name, (generated, model, stdDev)) in performanceResults)
         {
             var threshold = model + (2.5 * stdDev);
-            Assert.True(generated < threshold, 
+            Assert.True(generated < threshold,
                 $"{name} generated code is too slow: {generated:F6}ms per call vs model {model:F6}ms ± {stdDev:F6}ms (threshold: {threshold:F6}ms)");
         }
     }
@@ -377,8 +387,11 @@ public partial class {className}
     {
         var rules = new List<string>();
         var primes = new[] { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71 };
-        var words = new[] { "Fizz", "Buzz", "Whizz", "Bang", "Boom", "Pow", "Zap", "Crack", "Flash", "Thunder",
-                           "Lightning", "Storm", "Rain", "Wind", "Fire", "Ice", "Earth", "Water", "Air", "Energy" };
+        var words = new[]
+        {
+            "Fizz", "Buzz", "Whizz", "Bang", "Boom", "Pow", "Zap", "Crack", "Flash", "Thunder",
+            "Lightning", "Storm", "Rain", "Wind", "Fire", "Ice", "Earth", "Water", "Air", "Energy"
+        };
 
         for (int i = 0; i < ruleCount; i++)
         {
@@ -406,12 +419,16 @@ public partial class {className}
 
         // We need to create a compilation with the required source code.
         var compilation = Microsoft.CodeAnalysis.CSharp.CSharpCompilation.Create(nameof(PerformanceTests),
-            [Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(classText, cancellationToken: TestContext.Current.CancellationToken)],
+            [
+                Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(classText,
+                    cancellationToken: TestContext.Current.CancellationToken)
+            ],
             [
                 // To support 'System.Attribute' inheritance, add reference to 'System.Private.CoreLib'.
                 Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(object).Assembly.Location)
             ],
-            new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary)
+            new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind
+                    .DynamicallyLinkedLibrary)
                 .WithOptimizationLevel(Microsoft.CodeAnalysis.OptimizationLevel.Release)
                 .WithDeterministic(false));
 
@@ -419,7 +436,8 @@ public partial class {className}
         var runResult = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult();
 
         // All generated files can be found in 'RunResults.GeneratedTrees'.
-        var generatedAttributeSyntax = runResult.GeneratedTrees.Single(t => t.FilePath.EndsWith("FizzBuzzWhizzAttribute.g.cs"));
+        var generatedAttributeSyntax =
+            runResult.GeneratedTrees.Single(t => t.FilePath.EndsWith("FizzBuzzWhizzAttribute.g.cs"));
         var generatedClassSyntax = runResult.GeneratedTrees.Single(t => t.FilePath.EndsWith($"{className}.g.cs"));
 
         // Add the generated tree to the compilation
