@@ -191,7 +191,7 @@ partial class {className}
     private IEnumerable<string> GenerateIdentityBody(KeyValuePair<long, string>[] rules)
     {
         // Use exponential approach for small rule sets (optimal performance)
-        if (rules.Length <= 6)
+        if (rules.Length <= 7)
         {
             return GenerateExponentialApproach(rules);
         }
@@ -236,19 +236,23 @@ partial class {className}
     /// </summary>
     private IEnumerable<string> GenerateLinearApproach(KeyValuePair<long, string>[] rules)
     {
-        yield return "        var result = new System.Text.StringBuilder();";
-        yield return "        bool hasMatch = false;";
+        var maxLength = rules.Sum(r => r.Value.Length);
+        yield return $"        System.Span<char> result = stackalloc char[{maxLength}];";
+        yield return "        var index = 0;";
+        yield return "        var hasMatch = false;";
 
         foreach (var rule in rules)
         {
+            var length = rule.Value.Length;
             yield return $"        if (n % {rule.Key} == 0)";
             yield return "        {";
-            yield return $"            result.Append(\"{rule.Value}\");";
+            yield return $"            \"{rule.Value}\".CopyTo(result[index..]);";
+            yield return $"            index += {length};";
             yield return "            hasMatch = true;";
             yield return "        }";
         }
 
-        yield return "        if (hasMatch) return result.ToString();";
+        yield return "        if (hasMatch) return result[..index].ToString();";
     }
 
     private static IEnumerable<bool[]> GetBooleanPermutations(int n)
