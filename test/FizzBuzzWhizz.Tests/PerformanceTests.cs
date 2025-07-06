@@ -1,5 +1,6 @@
 namespace FizzBuzzWhizz.Tests;
 
+[Collection("Performance Tests")]
 public class PerformanceTests
 {
     private const string PerformanceTestClassText = @"
@@ -48,7 +49,7 @@ public partial class PerformanceTest
 
         // For O(1) complexity, the ratio should be close to 1 (within reasonable bounds)
         // Allow for some variance due to JIT, GC, etc., but not exponential growth
-        Assert.True(ratio < 5, $"Time complexity appears non-constant: {firstMeasurement:F6}ms -> {lastMeasurement:F6}ms (ratio: {ratio:F2})");
+        Assert.True(ratio < 3, $"Time complexity appears non-constant: {firstMeasurement:F6}ms -> {lastMeasurement:F6}ms (ratio: {ratio:F2})");
     }
 
     [Fact]
@@ -90,7 +91,7 @@ public partial class PerformanceTest
         var ratio = lastMeasurement / firstMeasurement;
 
         // For O(1) space complexity, memory per call should remain constant
-        Assert.True(ratio < 3, $"Space complexity appears non-constant: {firstMeasurement:F2} bytes -> {lastMeasurement:F2} bytes per call (ratio: {ratio:F2})");
+        Assert.True(ratio < 2, $"Space complexity appears non-constant: {firstMeasurement:F2} bytes -> {lastMeasurement:F2} bytes per call (ratio: {ratio:F2})");
     }
 
     [Fact]
@@ -155,10 +156,10 @@ public partial class {name}Test
         var expectedMediumRatio = (double)mediumRules / simpleRules;
         var expectedComplexRatio = (double)complexRules / simpleRules;
 
-        // Allow for some overhead but should scale roughly linearly
-        Assert.True(mediumRatio < expectedMediumRatio * 2,
+                // Allow for some overhead but should scale roughly linearly
+        Assert.True(mediumRatio < expectedMediumRatio * 1.5,
             $"Medium complexity scales poorly: {mediumRatio:F2}x vs expected ~{expectedMediumRatio:F2}x");
-        Assert.True(complexRatio < expectedComplexRatio * 3,
+        Assert.True(complexRatio < expectedComplexRatio * 2,
             $"Complex complexity scales poorly: {complexRatio:F2}x vs expected ~{expectedComplexRatio:F2}x");
     }
 
@@ -222,8 +223,8 @@ public partial class {className}
             var expectedRatio = ruleCount; // Linear scaling
 
             // Allow for some overhead but should not scale exponentially
-            // For 10 rules, we expect roughly 10x the time, but allow up to 20x for overhead
-            var maxAllowedRatio = expectedRatio * 2;
+            // For 10 rules, we expect roughly 10x the time, but allow up to 15x for overhead
+            var maxAllowedRatio = expectedRatio * 1.5;
 
             Assert.True(ratio < maxAllowedRatio,
                 $"Rule count {ruleCount} scales poorly: {ratio:F2}x vs expected ~{expectedRatio:F2}x (max allowed: {maxAllowedRatio:F2}x)");
@@ -239,9 +240,9 @@ public partial class {className}
             growthRates.Add(growthRate);
         }
 
-        // Average growth rate should be reasonable (not exponential)
+                // Average growth rate should be reasonable (not exponential)
         var avgGrowthRate = growthRates.Average();
-        Assert.True(avgGrowthRate < 2.0,
+        Assert.True(avgGrowthRate < 1.5,
             $"Average growth rate {avgGrowthRate:F2} suggests exponential scaling");
     }
 
@@ -283,6 +284,95 @@ public partial class {className}
         Assert.All(results, result => Assert.True(result, "Method failed for some input size"));
     }
 
+        [Fact]
+    public void IdentityMethod_ShouldMaintainPerformanceBaseline()
+    {
+        // Arrange - Test cases that should maintain consistent performance
+        var baselineTests = new[]
+        {
+            ("FizzBuzz", "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\")]", typeof(FizzBuzzModel)),
+            ("FizzBuzzWhizz", "[FizzBuzzWhizz.FizzBuzzWhizz(\"Fizz\", \"3\", \"Buzz\", \"5\", \"Whizz\", \"7\")]", typeof(FizzBuzzWhizzModel))
+        };
+        
+        var testCases = GenerateTestCases(1000);
+        var performanceResults = new Dictionary<string, (double generated, double model, double stdDev)>();
+        
+        // Act - Measure performance for baseline test cases with multiple runs
+        foreach (var (name, attributeText, modelType) in baselineTests)
+        {
+            var className = $"{name}BaselineTest";
+            var classText = $@"
+namespace TestNamespace;
+
+{attributeText}
+public partial class {className}
+{{
+}}";
+            
+            var (instance, method) = Generate(classText, className);
+            var modelInstance = Activator.CreateInstance(modelType);
+            var modelMethod = modelType.GetMethod("Identity");
+            Assert.NotNull(modelMethod);
+            
+            // Warmup
+            for (int i = 0; i < 100; i++)
+            {
+                method.Invoke(instance, [testCases[i]]);
+                modelMethod.Invoke(modelInstance, [testCases[i]]);
+            }
+            
+            // Multiple runs to establish baseline and variance
+            var generatedRuns = new List<double>();
+            var modelRuns = new List<double>();
+            const int numRuns = 5;
+            
+            for (int run = 0; run < numRuns; run++)
+            {
+                // Measure generated
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+                foreach (var testCase in testCases)
+                {
+                    method.Invoke(instance, [testCase]);
+                }
+                stopwatch.Stop();
+                var generatedTimePerCall = stopwatch.Elapsed.TotalMilliseconds / testCases.Length;
+                generatedRuns.Add(generatedTimePerCall);
+                
+                // Measure model
+                stopwatch.Restart();
+                foreach (var testCase in testCases)
+                {
+                    modelMethod.Invoke(modelInstance, [testCase]);
+                }
+                stopwatch.Stop();
+                var modelTimePerCall = stopwatch.Elapsed.TotalMilliseconds / testCases.Length;
+                modelRuns.Add(modelTimePerCall);
+            }
+            
+            var generatedAvg = generatedRuns.Average();
+            var modelAvg = modelRuns.Average();
+            var modelStdDev = CalculateStandardDeviation(modelRuns);
+            
+            performanceResults[name] = (generatedAvg, modelAvg, modelStdDev);
+        }
+        
+        // Assert - Generated code should not be more than 2.5 sigma above model average
+        foreach (var (name, (generated, model, stdDev)) in performanceResults)
+        {
+            var threshold = model + (2.5 * stdDev);
+            Assert.True(generated < threshold, 
+                $"{name} generated code is too slow: {generated:F6}ms per call vs model {model:F6}ms ± {stdDev:F6}ms (threshold: {threshold:F6}ms)");
+        }
+    }
+
+    private static double CalculateStandardDeviation(List<double> values)
+    {
+        var mean = values.Average();
+        var sumOfSquares = values.Sum(x => Math.Pow(x - mean, 2));
+        return Math.Sqrt(sumOfSquares / values.Count);
+    }
+
     private static string GenerateAttributeText(int ruleCount)
     {
         var rules = new List<string>();
@@ -321,7 +411,9 @@ public partial class {className}
                 // To support 'System.Attribute' inheritance, add reference to 'System.Private.CoreLib'.
                 Microsoft.CodeAnalysis.MetadataReference.CreateFromFile(typeof(object).Assembly.Location)
             ],
-            new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary));
+            new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary)
+                .WithOptimizationLevel(Microsoft.CodeAnalysis.OptimizationLevel.Release)
+                .WithDeterministic(false));
 
         // Run generators and retrieve all results.
         var runResult = driver.RunGenerators(compilation, TestContext.Current.CancellationToken).GetRunResult();
@@ -376,5 +468,33 @@ public partial class {className}
         }
 
         return testCases;
+    }
+
+    public class FizzBuzzModel
+    {
+        public string Identity(long n)
+        {
+            if (n == 0) return "0";
+            if (n % 3 == 0 && n % 5 == 0) return "FizzBuzz";
+            if (n % 3 == 0) return "Fizz";
+            if (n % 5 == 0) return "Buzz";
+            return n.ToString();
+        }
+    }
+
+    public class FizzBuzzWhizzModel
+    {
+        public string Identity(long n)
+        {
+            if (n == 0) return "0";
+            if (n % 3 == 0 && n % 5 == 0 && n % 7 == 0) return "FizzBuzzWhizz";
+            if (n % 3 == 0 && n % 5 == 0) return "FizzBuzz";
+            if (n % 3 == 0 && n % 7 == 0) return "FizzWhizz";
+            if (n % 5 == 0 && n % 7 == 0) return "BuzzWhizz";
+            if (n % 3 == 0) return "Fizz";
+            if (n % 5 == 0) return "Buzz";
+            if (n % 7 == 0) return "Whizz";
+            return n.ToString();
+        }
     }
 }

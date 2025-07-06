@@ -103,6 +103,24 @@ docker run --rm -it fizz_buzz_whizz ./run_tests.sh -filter-query "/*/*/FizzBuzzW
 
 [See for details of filters.](https://xunit.net/docs/query-filter-language)
 
+## Performance Testing
+
+The project includes comprehensive performance tests that validate:
+
+- **Time and space complexity** - Ensures O(1) performance with input size
+- **Rule count scaling** - Validates performance as the number of rules increases
+- **Performance regression** - Uses statistical analysis (2-sigma thresholds) to detect regressions
+- **Baseline comparison** - Compares generated code against hand-optimized model implementations
+
+Run performance tests:
+
+```sh
+./build_docker.sh fizz_buzz_whizz
+docker run --rm -it fizz_buzz_whizz ./run_tests.sh -filter-query "/*/*/PerformanceTests"
+```
+
+**Note:** Performance tests run serially to ensure consistent results and use Release optimizations for accurate measurements.
+
 ## Contributing
 
 Contributions are welcome! Please open issues or pull requests for improvements or bug fixes.
